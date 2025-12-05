@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+<link rel="stylesheet" type="text/css" href="2.css">
+</head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yuki</title>
+    <!-- 引入Tailwind CSS简化样式开发 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#6B7280',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            /* 照片墙瀑布流布局 */
+            .photo-masonry {
+                column-count: 1;
+                column-gap: 1rem;
+            }
+            @screen sm {
+                .photo-masonry {
+                    column-count: 2;
+                }
+            }
+            @screen md {
+                .photo-masonry {
+                    column-count: 3;
+                }
+            }
+            @screen lg {
+                .photo-masonry {
+                    column-count: 4;
+                }
+            }
+            @screen xl {
+                .photo-masonry {
+                    column-count: 5;
+                }
+            }
+            
+            /* 照片卡片样式 */
+            .photo-card {
+                break-inside: avoid;
+                margin-bottom: 1rem;
+                position: relative;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+            }
+            .photo-card:hover {
+                transform: scale(1.02);
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            }
+            
+            /* 删除按钮样式 */
+            .delete-btn {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background-color: rgba(255, 255, 255, 0.8);
+                border-radius: 50%;
+                width: 2rem;
+                height: 2rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                cursor: pointer;
+                z-index: 10;
+            }
+            .photo-card:hover .delete-btn {
+                opacity: 1;
+            }
+            .delete-btn:hover {
+                background-color: #ef4444;
+                color: white;
+            }
+            
+            /* 上传按钮样式 */
+            .upload-btn {
+                transition: all 0.3s ease;
+            }
+            .upload-btn:hover {
+                transform: translateY(-2px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- 页面标题 -->
+        <header class="text-center mb-8">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-800 mb-2">SAKURA</h1>
+            <p class="text-gray-600"></p>
+        </header>
+        
+        <!-- 上传区域 -->
+        <section class="mb-10 bg-white rounded-lg p-6 shadow-sm">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <!-- 文件选择输入（隐藏） -->
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    class="hidden" 
+                    multiple 
+                    accept="image/*"
+                >
+                
+                <!-- 上传按钮 -->
+                <button 
+                    id="uploadButton" 
+                    class="upload-btn bg-primary text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2"
+                >
+                    <i class="fas fa-upload"></i>
+                    <span>选择照片</span>
+                </button>
+                
+                <!-- 上传统计 -->
+                <div class="text-gray-600 flex items-center gap-2">
+                    <i class="fas fa-images"></i>
+                    <span id="photoCount">已选择 0 张照片</span>
+                </div>
+            </div>
+            
+            <!-- 提示信息 -->
+            <p class="mt-4 text-sm text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                支持批量上传 JPG、PNG、GIF 等格式图片，单张图片不超过 10MB
+            </p>
+        </section>
+        
+        <!-- 照片墙区域 -->
+        <section>
+            <!-- 空状态提示 -->
+            <div id="emptyState" class="text-center py-16">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+                    <i class="fas fa-images text-4xl text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-medium text-gray-700 mb-2">暂无照片</h3>
+                <p class="text-gray-500">点击上方按钮上传照片，打造你的专属照片墙</p>
+            </div>
+            
+            <!-- 照片墙容器 -->
+            <div id="photoWall" class="photo-masonry hidden"></div>
+        </section>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const photoWall = document.getElementById('photoWall');
+        const emptyState = document.getElementById('emptyState');
+        const photoCount = document.getElementById('photoCount');
+        
+        // 存储已上传的图片信息
+        let photoList = [];
+        
+        // 上传按钮点击事件 - 触发文件选择
+        uploadButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 文件选择事件处理
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            // 遍历选中的文件
+            Array.from(files).forEach(file => {
+                // 验证文件类型
+                if (!file.type.startsWith('image/')) {
+                    alert(`文件 ${file.name} 不是图片，请选择图片文件！`);
+                    return;
+                }
+                
+                // 验证文件大小（10MB）
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    alert(`文件 ${file.name} 超过10MB，请选择更小的图片！`);
+                    return;
+                }
+                
+                // 读取文件并创建预览
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    addPhotoToWall(file.name, event.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            // 清空文件输入（允许重复选择相同文件）
+            fileInput.value = '';
+        }
+        
+        // 添加照片到照片墙
+        function addPhotoToWall(filename, src) {
+            // 生成唯一ID
+            const photoId = 'photo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            // 添加到照片列表
+            photoList.push({
+                id: photoId,
+                name: filename,
+                src: src
+            });
+            
+            // 更新计数显示
+            updatePhotoCount();
+            
+            // 显示照片墙，隐藏空状态
+            photoWall.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            
+            // 创建照片卡片
+            const photoCard = document.createElement('div');
+            photoCard.className = 'photo-card';
+            photoCard.id = photoId;
+            
+            // 创建图片元素
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = filename;
+            img.className = 'w-full h-auto object-cover';
+            img.loading = 'lazy'; // 懒加载
+            
+            // 创建删除按钮
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+            deleteBtn.title = '删除这张照片';
+            
+            // 删除按钮点击事件
+            deleteBtn.addEventListener('click', () => {
+                if (confirm(`确定要删除照片 ${filename} 吗？`)) {
+                    removePhotoFromWall(photoId);
+                }
+            });
+            
+            // 组装照片卡片
+            photoCard.appendChild(deleteBtn);
+            photoCard.appendChild(img);
+            
+            // 添加到照片墙
+            photoWall.appendChild(photoCard);
+        }
+        
+        // 从照片墙移除照片
+        function removePhotoFromWall(photoId) {
+            // 从列表中移除
+            photoList = photoList.filter(photo => photo.id !== photoId);
+            
+            // 从DOM中移除
+            const photoCard = document.getElementById(photoId);
+            if (photoCard) {
+                // 添加删除动画
+                photoCard.style.opacity = '0';
+                photoCard.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    photoCard.remove();
+                    
+                    // 更新计数
+                    updatePhotoCount();
+                    
+                    // 如果没有照片了，显示空状态
+                    if (photoList.length === 0) {
+                        photoWall.classList.add('hidden');
+                        emptyState.classList.remove('hidden');
+                    }
+                }, 300);
+            }
+        }
+        
+        // 更新照片计数显示
+        function updatePhotoCount() {
+            photoCount.textContent = `已选择 ${photoList.length} 张照片`;
+        }
+        
+        // 处理图片加载失败
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG' && e.target.classList.contains('object-cover')) {
+                e.target.src = 'https://picsum.photos/400/600?grayscale';
+                e.target.alt = '图片加载失败';
+            }
+        }, true);
+    </script>
+</body>
+</html>

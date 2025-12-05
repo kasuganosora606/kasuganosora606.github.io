@@ -1,0 +1,652 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量视频上传器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-top: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #2575fc;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .upload-area {
+            border: 3px dashed #6a11cb;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+            background-color: #f8f9ff;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            background-color: #eef2ff;
+            border-color: #2575fc;
+            transform: translateY(-5px);
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            color: #6a11cb;
+            margin-bottom: 15px;
+        }
+        
+        .upload-area h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .upload-area p {
+            color: #777;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(106, 17, 203, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .file-list {
+            margin-top: 30px;
+        }
+        
+        .file-list h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .file-item {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .file-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .file-icon {
+            font-size: 2.5rem;
+            color: #6a11cb;
+            margin-right: 15px;
+        }
+        
+        .file-info {
+            flex-grow: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .file-size {
+            color: #777;
+            font-size: 0.9rem;
+        }
+        
+        .file-progress {
+            width: 150px;
+            height: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-right: 15px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #777;
+            transition: color 0.3s;
+        }
+        
+        .action-btn:hover {
+            color: #6a11cb;
+        }
+        
+        .upload-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        
+        .upload-stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #6a11cb;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #777;
+        }
+        
+        .no-files {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+        
+        .instructions {
+            background-color: #f0f7ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .instructions h4 {
+            color: #2575fc;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+            color: #555;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            width: 100%;
+            max-width: 1000px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .upload-controls {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .file-progress {
+                width: 100%;
+                margin: 10px 0;
+            }
+            
+            .file-actions {
+                align-self: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-video"></i> 批量视频上传器</h1>
+            <p class="subtitle">支持多文件选择和拖放上传，最大支持100个文件，每个文件最大2GB</p>
+        </header>
+        
+        <div class="upload-area" id="dropArea">
+            <div class="upload-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h3>选择或拖放视频文件到此区域</h3>
+            <p>支持 MP4, AVI, MOV, WMV, FLV, MKV 等常见视频格式</p>
+            <button class="btn" id="selectFilesBtn">
+                <i class="fas fa-folder-open"></i> 选择文件
+            </button>
+            <input type="file" id="fileInput" multiple accept="video/*">
+        </div>
+        
+        <div class="file-list">
+            <h3><i class="fas fa-list"></i> 待上传文件 (<span id="fileCount">0</span>)</h3>
+            <div id="filesContainer">
+                <div class="no-files" id="noFilesMessage">
+                    <i class="fas fa-film fa-2x"></i>
+                    <p>还没有选择任何文件</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="upload-controls">
+            <div class="upload-stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalFiles">0</div>
+                    <div class="stat-label">总文件数</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalSize">0 MB</div>
+                    <div class="stat-label">总大小</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="uploadedFiles">0</div>
+                    <div class="stat-label">已上传</div>
+                </div>
+            </div>
+            
+            <div>
+                <button class="btn" id="uploadBtn" disabled>
+                    <i class="fas fa-upload"></i> 开始上传
+                </button>
+                <button class="btn" id="clearBtn" style="background: linear-gradient(to right, #ff416c, #ff4b2b); margin-left: 10px;">
+                    <i class="fas fa-trash-alt"></i> 清空列表
+                </button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h4><i class="fas fa-info-circle"></i> 使用说明</h4>
+            <ul>
+                <li>点击"选择文件"按钮或拖放视频文件到上方区域</li>
+                <li>支持同时选择多个视频文件进行批量上传</li>
+                <li>上传前可以预览文件列表和删除不需要的文件</li>
+                <li>点击"开始上传"按钮开始上传所有文件</li>
+                <li>上传过程中可以查看每个文件的上传进度</li>
+            </ul>
+        </div>
+    </div>
+    
+    <footer>
+        <p>© 2023 批量视频上传器 | 本页面仅为前端演示，上传功能需要后端API支持</p>
+    </footer>
+
+    <script>
+        // 获取DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const selectFilesBtn = document.getElementById('selectFilesBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const dropArea = document.getElementById('dropArea');
+        const filesContainer = document.getElementById('filesContainer');
+        const noFilesMessage = document.getElementById('noFilesMessage');
+        const fileCount = document.getElementById('fileCount');
+        const totalFiles = document.getElementById('totalFiles');
+        const totalSize = document.getElementById('totalSize');
+        const uploadedFiles = document.getElementById('uploadedFiles');
+        
+        // 文件数组
+        let files = [];
+        let uploadInProgress = false;
+        
+        // 点击选择文件按钮触发文件输入
+        selectFilesBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 文件选择发生变化
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        // 拖放功能
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+        
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        // 处理选择的文件
+        function handleFiles(selectedFiles) {
+            // 转换为数组
+            const newFiles = Array.from(selectedFiles);
+            
+            // 过滤非视频文件
+            const videoFiles = newFiles.filter(file => file.type.startsWith('video/'));
+            
+            if (videoFiles.length === 0) {
+                alert('请选择视频文件！');
+                return;
+            }
+            
+            // 检查文件数量限制
+            if (files.length + videoFiles.length > 100) {
+                alert('最多只能上传100个文件！');
+                return;
+            }
+            
+            // 添加新文件到数组
+            files.push(...videoFiles);
+            
+            // 更新UI
+            updateFileList();
+            updateStats();
+            uploadBtn.disabled = false;
+        }
+        
+        // 更新文件列表UI
+        function updateFileList() {
+            // 清空容器
+            filesContainer.innerHTML = '';
+            
+            if (files.length === 0) {
+                // 显示无文件消息
+                filesContainer.appendChild(noFilesMessage);
+                noFilesMessage.style.display = 'block';
+                fileCount.textContent = '0';
+                return;
+            }
+            
+            // 隐藏无文件消息
+            noFilesMessage.style.display = 'none';
+            fileCount.textContent = files.length;
+            
+            // 为每个文件创建UI元素
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.dataset.index = index;
+                
+                // 文件图标
+                const fileIcon = document.createElement('div');
+                fileIcon.className = 'file-icon';
+                fileIcon.innerHTML = '<i class="fas fa-file-video"></i>';
+                
+                // 文件信息
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'file-info';
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('div');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                fileInfo.appendChild(fileName);
+                fileInfo.appendChild(fileSize);
+                
+                // 进度条
+                const fileProgress = document.createElement('div');
+                fileProgress.className = 'file-progress';
+                
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.id = `progress-${index}`;
+                
+                fileProgress.appendChild(progressBar);
+                
+                // 操作按钮
+                const fileActions = document.createElement('div');
+                fileActions.className = 'file-actions';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn delete-btn';
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.addEventListener('click', () => removeFile(index));
+                
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'action-btn preview-btn';
+                previewBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                previewBtn.addEventListener('click', () => previewFile(file));
+                
+                fileActions.appendChild(previewBtn);
+                fileActions.appendChild(deleteBtn);
+                
+                // 组装元素
+                fileItem.appendChild(fileIcon);
+                fileItem.appendChild(fileInfo);
+                fileItem.appendChild(fileProgress);
+                fileItem.appendChild(fileActions);
+                
+                filesContainer.appendChild(fileItem);
+            });
+        }
+        
+        // 删除文件
+        function removeFile(index) {
+            if (uploadInProgress) {
+                alert('上传过程中不能删除文件！');
+                return;
+            }
+            
+            files.splice(index, 1);
+            updateFileList();
+            updateStats();
+            
+            if (files.length === 0) {
+                uploadBtn.disabled = true;
+            }
+        }
+        
+        // 预览文件（创建临时URL）
+        function previewFile(file) {
+            const url = URL.createObjectURL(file);
+            window.open(url, '_blank');
+        }
+        
+        // 更新统计信息
+        function updateStats() {
+            totalFiles.textContent = files.length;
+            
+            // 计算总大小
+            const totalBytes = files.reduce((total, file) => total + file.size, 0);
+            totalSize.textContent = formatFileSize(totalBytes);
+            
+            // 重置已上传计数
+            uploadedFiles.textContent = '0';
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 清空文件列表
+        clearBtn.addEventListener('click', () => {
+            if (uploadInProgress) {
+                alert('上传过程中不能清空列表！');
+                return;
+            }
+            
+            if (files.length > 0 && confirm('确定要清空所有文件吗？')) {
+                files = [];
+                updateFileList();
+                updateStats();
+                uploadBtn.disabled = true;
+            }
+        });
+        
+        // 上传文件
+        uploadBtn.addEventListener('click', async () => {
+            if (files.length === 0) return;
+            
+            uploadInProgress = true;
+            uploadBtn.disabled = true;
+            selectFilesBtn.disabled = true;
+            clearBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+            
+            let uploadedCount = 0;
+            
+            // 模拟上传每个文件
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const progressBar = document.getElementById(`progress-${i}`);
+                
+                // 模拟上传进度
+                await simulateUpload(file, (progress) => {
+                    if (progressBar) {
+                        progressBar.style.width = `${progress}%`;
+                    }
+                });
+                
+                uploadedCount++;
+                uploadedFiles.textContent = uploadedCount;
+                
+                // 标记为上传完成
+                const fileItem = document.querySelector(`.file-item[data-index="${i}"]`);
+                if (fileItem) {
+                    fileItem.style.opacity = '0.8';
+                    const checkIcon = document.createElement('div');
+                    checkIcon.innerHTML = '<i class="fas fa-check-circle" style="color: #4CAF50; margin-left: 10px;"></i>';
+                    fileItem.querySelector('.file-actions').appendChild(checkIcon);
+                }
+            }
+            
+            // 上传完成
+            uploadInProgress = false;
+            selectFilesBtn.disabled = false;
+            clearBtn.disabled = false;
+            uploadBtn.innerHTML = '<i class="fas fa-check"></i> 上传完成';
+            
+            // 3秒后重置上传按钮
+            setTimeout(() => {
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 开始上传';
+                uploadBtn.disabled = false;
+            }, 3000);
+        });
+        
+        // 模拟上传函数
+        function simulateUpload(file, progressCallback) {
+            return new Promise(resolve => {
+                let progress = 0;
+                
+                // 模拟上传进度
+                const interval = setInterval(() => {
+                    // 随机增加进度
+                    progress += Math.random() * 15;
+                    
+                    if (progress > 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        resolve();
+                    }
+                    
+                    progressCallback(progress);
+                }, 200);
+            });
+        }
+        
+        // 初始化
+        updateFileList();
+    </script>
+</body>
+</html>

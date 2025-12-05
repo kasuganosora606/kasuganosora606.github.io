@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+<link rel="stylesheet" type="text/css" href="3.css">
+</head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAKURA</title>
+    <!-- 引入Tailwind CSS简化样式开发 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#6B7280',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            /* 视频墙瀑布流布局 */
+            .video-masonry {
+                column-count: 1;
+                column-gap: 1rem;
+            }
+             sm {
+                .video-masonry {
+                    column-count: 2;
+                }
+            }
+             md {
+                .video-masonry {
+                    column-count: 3;
+                }
+            }
+             lg {
+                .video-masonry {
+                    column-count: 4;
+                }
+            }
+             xl {
+                .video-masonry {
+                    column-count: 5;
+                }
+            }
+            
+            /* 视频卡片样式 */
+            .video-card {
+                break-inside: avoid;
+                margin-bottom: 1rem;
+                position: relative;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+                background-color: #000;
+            }
+            .video-card:hover {
+                transform: scale(1.02);
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            }
+            
+            /* 视频播放按钮 */
+            .play-btn {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 4rem;
+                height: 4rem;
+                border-radius: 50%;
+                background-color: rgba(79, 70, 229, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                opacity: 1;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                z-index: 5;
+            }
+            .video-card:hover .play-btn {
+                background-color: rgba(79, 70, 229, 1);
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            .video-playing .play-btn {
+                opacity: 0;
+            }
+            
+            /* 删除按钮样式 */
+            .delete-btn {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background-color: rgba(255, 255, 255, 0.8);
+                border-radius: 50%;
+                width: 2rem;
+                height: 2rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                cursor: pointer;
+                z-index: 10;
+            }
+            .video-card:hover .delete-btn {
+                opacity: 1;
+            }
+            .delete-btn:hover {
+                background-color: #ef4444;
+                color: white;
+            }
+            
+            /* 上传按钮样式 */
+            .upload-btn {
+                transition: all 0.3s ease;
+            }
+            .upload-btn:hover {
+                transform: translateY(-2px);
+            }
+            
+            /* 视频信息标签 */
+            .video-info {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 0.5rem;
+                background: linear-gradient(transparent, rgba(0,0,0,0.7));
+                color: white;
+                font-size: 0.875rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .video-card:hover .video-info {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- 页面标题 -->
+        <header class="text-center mb-8">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-800 mb-2">悠远的天空</h1>
+            <p class="text-gray-600">In solitude，where we are not least alone</p>
+        </header>
+        
+        <!-- 上传区域 -->
+        <section class="mb-10 bg-white rounded-lg p-6 shadow-sm">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <!-- 文件选择输入（隐藏） -->
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    class="hidden" 
+                    multiple 
+                    accept="video/*"
+                >
+                
+                <!-- 上传按钮 -->
+                <button 
+                    id="uploadButton" 
+                    class="upload-btn bg-primary text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2"
+                >
+                    <i class="fas fa-upload"></i>
+                    <span>选择视频</span>
+                </button>
+                
+                <!-- 上传统计 -->
+                <div class="text-gray-600 flex items-center gap-2">
+                    <i class="fas fa-video"></i>
+                    <span id="videoCount">已选择 0 个视频</span>
+                </div>
+            </div>
+            
+            <!-- 提示信息 -->
+            <p class="mt-4 text-sm text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                
+            </p>
+        </section>
+        
+        <!-- 视频墙区域 -->
+        <section>
+            <!-- 空状态提示 -->
+            <div id="emptyState" class="text-center py-16">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+                    <i class="fas fa-video text-4xl text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-medium text-gray-700 mb-2">暂无视频</h3>
+                <p class="text-gray-500"></p>
+            </div>
+            
+            <!-- 视频墙容器 -->
+            <div id="videoWall" class="video-masonry hidden"></div>
+        </section>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const videoWall = document.getElementById('videoWall');
+        const emptyState = document.getElementById('emptyState');
+        const videoCount = document.getElementById('videoCount');
+        
+        // 存储已上传的视频信息
+        let videoList = [];
+        // 记录正在播放的视频
+        let playingVideo = null;
+        
+        // 上传按钮点击事件 - 触发文件选择
+        uploadButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 文件选择事件处理
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            // 遍历选中的文件
+            Array.from(files).forEach(file => {
+                // 验证文件类型
+                if (!file.type.startsWith('video/')) {
+                    alert(`文件 ${file.name} 不是视频，请选择视频文件！`);
+                    return;
+                }
+                
+                // 验证文件大小（50MB）
+                const maxSize = 50 * 1024 * 1024; // 50MB
+                if (file.size > maxSize) {
+                    alert(`文件 ${file.name} 超过50MB，请选择更小的视频！`);
+                    return;
+                }
+                
+                // 创建视频预览URL
+                const videoUrl = URL.createObjectURL(file);
+                addVideoToWall(file.name, videoUrl, file.size, file.type);
+            });
+            
+            // 清空文件输入（允许重复选择相同文件）
+            fileInput.value = '';
+        }
+        
+        // 添加视频到视频墙
+        function addVideoToWall(filename, src, size, type) {
+            // 生成唯一ID
+            const videoId = 'video-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            // 格式化文件大小
+            const formattedSize = formatFileSize(size);
+            
+            // 添加到视频列表
+            videoList.push({
+                id: videoId,
+                name: filename,
+                src: src,
+                size: size,
+                type: type
+            });
+            
+            // 更新计数显示
+            updateVideoCount();
+            
+            // 显示视频墙，隐藏空状态
+            videoWall.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            
+            // 创建视频卡片
+            const videoCard = document.createElement('div');
+            videoCard.className = 'video-card';
+            videoCard.id = videoId;
+            
+            // 创建视频元素
+            const video = document.createElement('video');
+            video.src = src;
+            video.alt = filename;
+            video.className = 'w-full h-auto object-cover';
+            video.loading = 'lazy'; // 懒加载
+            video.controls = false; // 初始隐藏原生控制条
+            video.preload = 'metadata'; // 仅预加载元数据（获取封面）
+            
+            // 加载视频元数据（获取封面）
+            video.onloadedmetadata = function() {
+                // 自动截取第一帧作为封面
+                video.currentTime = 0.1;
+            };
+            
+            // 视频播放/暂停控制
+            video.addEventListener('click', function() {
+                toggleVideoPlayback(video, videoCard);
+            });
+            
+            // 视频播放结束
+            video.addEventListener('ended', function() {
+                videoCard.classList.remove('video-playing');
+                playingVideo = null;
+            });
+            
+            // 创建播放按钮
+            const playBtn = document.createElement('div');
+            playBtn.className = 'play-btn';
+            playBtn.innerHTML = '<i class="fas fa-play text-xl"></i>';
+            playBtn.title = '播放视频';
+            playBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleVideoPlayback(video, videoCard);
+            });
+            
+            // 创建删除按钮
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+            deleteBtn.title = '删除这个视频';
+            
+            // 删除按钮点击事件
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm(`确定要删除视频 ${filename} 吗？`)) {
+                    removeVideoFromWall(videoId, src);
+                }
+            });
+            
+            // 创建视频信息标签
+            const videoInfo = document.createElement('div');
+            videoInfo.className = 'video-info';
+            videoInfo.innerHTML = `
+                <div class="truncate">${filename}</div>
+                <div class="text-xs opacity-80">${formattedSize} · ${type.split('/')[1].toUpperCase()}</div>
+            `;
+            
+            // 组装视频卡片
+            videoCard.appendChild(playBtn);
+            videoCard.appendChild(deleteBtn);
+            videoCard.appendChild(video);
+            videoCard.appendChild(videoInfo);
+            
+            // 添加到视频墙
+            videoWall.appendChild(videoCard);
+        }
+        
+        // 切换视频播放/暂停状态
+        function toggleVideoPlayback(video, videoCard) {
+            // 如果有其他视频在播放，先暂停
+            if (playingVideo && playingVideo !== video) {
+                playingVideo.pause();
+                document.getElementById(playingVideo.dataset.cardId).classList.remove('video-playing');
+            }
+            
+            if (video.paused) {
+                video.play();
+                videoCard.classList.add('video-playing');
+                playingVideo = video;
+                video.dataset.cardId = videoCard.id;
+            } else {
+                video.pause();
+                videoCard.classList.remove('video-playing');
+                playingVideo = null;
+            }
+        }
+        
+        // 从视频墙移除视频
+        function removeVideoFromWall(videoId, videoUrl) {
+            // 释放视频URL对象
+            URL.revokeObjectURL(videoUrl);
+            
+            // 从列表中移除
+            videoList = videoList.filter(video => video.id !== videoId);
+            
+            // 从DOM中移除
+            const videoCard = document.getElementById(videoId);
+            if (videoCard) {
+                // 如果是正在播放的视频，先暂停
+                const video = videoCard.querySelector('video');
+                if (video === playingVideo) {
+                    video.pause();
+                    playingVideo = null;
+                }
+                
+                // 添加删除动画
+                videoCard.style.opacity = '0';
+                videoCard.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    videoCard.remove();
+                    
+                    // 更新计数
+                    updateVideoCount();
+                    
+                    // 如果没有视频了，显示空状态
+                    if (videoList.length === 0) {
+                        videoWall.classList.add('hidden');
+                        emptyState.classList.remove('hidden');
+                    }
+                }, 300);
+            }
+        }
+        
+        // 更新视频计数显示
+        function updateVideoCount() {
+            videoCount.textContent = `已选择 ${videoList.length} 个视频`;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 处理视频加载失败
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'VIDEO' && e.target.classList.contains('object-cover')) {
+                // 视频加载失败时显示占位图
+                const videoCard = e.target.parentElement;
+                const placeholder = document.createElement('div');
+                placeholder.className = 'w-full h-64 bg-gray-900 flex items-center justify-center';
+                placeholder.innerHTML = `
+                    <div class="text-center text-gray-400">
+                        <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                        <p class="text-sm">视频加载失败</p>
+                    </div>
+                `;
+                videoCard.replaceChild(placeholder, e.target);
+            }
+        }, true);
+        
+        // 页面卸载时释放所有视频URL
+        window.addEventListener('beforeunload', function() {
+            videoList.forEach(video => {
+                URL.revokeObjectURL(video.src);
+            });
+        });
+    </script>
+</body>
+</html>

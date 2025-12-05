@@ -1,0 +1,22 @@
+body 
+{
+	background-image:url('clanned.gif');
+
+	background-color:#0c56de;
+	max: width 100px; 
+	max-height: 100px;
+
+}
+ 
+body {
+	background-color:#d0e4fe;
+}
+p{
+	color:rgb(255, 0, 128);
+	text-align:center;
+}
+p {
+	font-family:"Times New Roman";
+	font: size 50px;}
+
+
